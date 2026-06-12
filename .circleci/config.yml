@@ -15,6 +15,21 @@ jobs:
             trufflehog3 --no-history --severity MEDIUM app/
             echo "Secret scan passed - no credentials found"
 
+  sast-scan:
+    docker:
+      - image: returntocorp/semgrep
+    steps:
+      - checkout
+      - run:
+          name: Run Semgrep SAST
+          command: |
+            semgrep --config=p/python \
+                    --config=p/secrets \
+                    --error \
+                    --verbose \
+                    app/
+            echo "SAST scan passed - no security issues found"
+
   test:
     docker:
       - image: cimg/python:3.11
@@ -43,5 +58,6 @@ workflows:
   secure-pipeline:
     jobs:
       - secret-scan
+      - sast-scan
       - test:
-          requires: [secret-scan]
+          requires: [secret-scan, sast-scan]
