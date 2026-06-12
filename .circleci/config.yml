@@ -56,7 +56,6 @@ jobs:
   build-and-scan:
     docker:
       - image: cimg/base:stable
-    context: payment-prod-secrets
     steps:
       - checkout
       - setup_remote_docker:
@@ -93,5 +92,4 @@ workflows:
       - test:
           requires: [secret-scan, sast-scan]
       - build-and-scan:
-          context: payment-prod-secrets
           requires: [test]
