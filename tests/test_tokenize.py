@@ -30,7 +30,7 @@ def test_tokenize_invalid_card_too_short():
     assert response.status_code == 400
 
 def test_tokenize_invalid_card_too_long():
-    response = client.post("/tokenize", json={"card_number": "123456789012345678901"})
+    response = client.post("/tokenize", json={"card_number": "12345678901234567890"})
     assert response.status_code == 400
 
 def test_detokenize_valid_token():

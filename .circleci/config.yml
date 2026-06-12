@@ -12,7 +12,7 @@ jobs:
       - run:
           name: Scan for secrets
           command: |
-            trufflehog3 --no-history --severity MEDIUM .
+            trufflehog3 --no-history --severity MEDIUM --config .trufflehog3.yml .
             echo "Secret scan passed - no credentials found"
 
   test:
