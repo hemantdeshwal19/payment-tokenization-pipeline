@@ -26,7 +26,6 @@ jobs:
             semgrep --config=p/python \
                     --config=p/secrets \
                     --error \
-                    --verbose \
                     app/
             echo "SAST scan passed - no security issues found"
 
@@ -54,6 +53,35 @@ jobs:
             . venv/bin/activate
             pytest tests/ -v
 
+  build-and-scan:
+    docker:
+      - image: cimg/base:stable
+    steps:
+      - checkout
+      - setup_remote_docker:
+          docker_layer_caching: true
+      - run:
+          name: Build Docker image
+          command: |
+            docker build -t $DOCKER_USER/tokenizer:$CIRCLE_SHA1 .
+      - run:
+          name: Install Trivy
+          command: |
+            curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
+      - run:
+          name: Scan image for vulnerabilities
+          command: |
+            trivy image --exit-code 1 \
+                        --severity CRITICAL \
+                        --no-progress \
+                        $DOCKER_USER/tokenizer:$CIRCLE_SHA1
+            echo "Container scan passed - no CRITICAL CVEs found"
+      - run:
+          name: Push image to Docker Hub
+          command: |
+            echo $DOCKER_PASSWORD | docker login -u $DOCKER_USER --password-stdin
+            docker push $DOCKER_USER/tokenizer:$CIRCLE_SHA1
+
 workflows:
   secure-pipeline:
     jobs:
@@ -61,3 +89,5 @@ workflows:
       - sast-scan
       - test:
           requires: [secret-scan, sast-scan]
+      - build-and-scan:
+          requires: [test]
