@@ -1,6 +1,20 @@
 version: 2.1
 
 jobs:
+  secret-scan:
+    docker:
+      - image: cimg/python:3.11
+    steps:
+      - checkout
+      - run:
+          name: Install TruffleHog
+          command: pip install trufflehog3
+      - run:
+          name: Scan for secrets
+          command: |
+            trufflehog3 --no-history --severity MEDIUM .
+            echo "Secret scan passed - no credentials found"
+
   test:
     docker:
       - image: cimg/python:3.11
@@ -28,4 +42,6 @@ jobs:
 workflows:
   secure-pipeline:
     jobs:
-      - test
+      - secret-scan
+      - test:
+          requires: [secret-scan]
