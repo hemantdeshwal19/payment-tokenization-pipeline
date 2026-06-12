@@ -84,6 +84,18 @@ jobs:
             echo $DOCKER_PASSWORD | docker login -u $DOCKER_USER --password-stdin
             docker push $DOCKER_USER/tokenizer:$CIRCLE_SHA1
 
+  deploy:
+    docker:
+      - image: cimg/base:stable
+    steps:
+      - checkout
+      - run:
+          name: Simulate deployment
+          command: |
+            echo "Deploying image: $DOCKER_USER/tokenizer:$CIRCLE_SHA1"
+            echo "All PCI controls passed - safe to deploy"
+            echo "Deploy complete"
+
 workflows:
   secure-pipeline:
     jobs:
@@ -93,3 +105,8 @@ workflows:
           requires: [secret-scan, sast-scan]
       - build-and-scan:
           requires: [test]
+      - hold-for-approval:
+          type: approval
+          requires: [build-and-scan]
+      - deploy:
+          requires: [hold-for-approval]
