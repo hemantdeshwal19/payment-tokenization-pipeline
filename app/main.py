@@ -1,3 +1,4 @@
+import os
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from app.crypto import encrypt, decrypt
@@ -39,3 +40,14 @@ def detokenize(req: DetokenizeRequest):
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+
+# --- Monit lab: intentional memory leak endpoint, for testing the ---
+# --- "if totalmem > 250 MB then restart" rule. Not production code. ---
+if os.environ.get("ENABLE_LEAK_TEST") == "1":
+    _leak_store = []
+
+    @app.post("/leak")
+    def leak():
+        _leak_store.append("x" * 10_000_000)  # ~10MB per call
+        return {"leaked_mb": len(_leak_store) * 10}
