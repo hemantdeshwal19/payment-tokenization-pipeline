@@ -16,7 +16,7 @@ Developer pushes code to GitHub
               ▼
 ┌─────────────────────────────────────┐
 │         CircleCI Pipeline           │
-│                                      │
+│                                     │
 │  secret-scan ──┐                    │
 │                ├── test ──          │
 │  sast-scan   ──┘        │           │
@@ -33,24 +33,24 @@ Developer pushes code to GitHub
               ▼
 ┌─────────────────────────────────────┐
 │         Running Service             │
-│                                      │
-│  FastAPI ──► /tokenize, /detokenize  │
-│                  │                   │
-│                  ▼                   │
-│           AES-256-GCM encrypt        │
-│                  │                   │
-│                  ▼                   │
-│         In-memory token store        │
+│                                     │
+│  FastAPI ──► /tokenize, /detokeni   │
+│                  │                  │
+│                  ▼                  │
+│           AES-256-GCM encrypt       │
+│                  │                  │
+│                  ▼                  │
+│         In-memory token store       │
 └─────────────────────────────────────┘
               │
               ▼
-┌─────────────────────────────────────┐
-│      Monit (host-level)              │
-│                                      │
-│  Process check + HTTP /health check  │
-│  Memory threshold restart             │
-│  Restart-storm alerting               │
-└─────────────────────────────────────┘
+┌────────────────────────────────────┐
+│      Monit (host-level)            │
+│                                    │
+│  Process check + HTTP /health chck │
+│  Memory threshold restart          │
+│  Restart-storm alerting            │
+└────────────────────────────────────┘
 ```
 
 ## Pipeline Security Gates
