@@ -1,36 +1,37 @@
+```yaml
 version: 2.1
 
 jobs:
 
   secret-scan:
-  machine: true
-  resource_class: hemantdeshwal19/hemant-runner
+    machine: true
+    resource_class: hemantdeshwal19/hemant-runner
 
-  steps:
-    - checkout
+    steps:
+      - checkout
 
-    - run:
-        name: Install TruffleHog
-        command: |
-          python3 -m pip install --user trufflehog3
+      - run:
+          name: Install TruffleHog
+          command: |
+            python3 -m pip install --user trufflehog3
 
-          echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$BASH_ENV"
-          export PATH="$HOME/.local/bin:$PATH"
+            echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$BASH_ENV"
+            export PATH="$HOME/.local/bin:$PATH"
 
-          which trufflehog3
-          trufflehog3 --help
+            which trufflehog3
+            trufflehog3 --help
 
-    - run:
-        name: Scan for secrets
-        command: |
-          source "$BASH_ENV"
+      - run:
+          name: Scan for secrets
+          command: |
+            source "$BASH_ENV"
 
-          trufflehog3 \
-            --no-history \
-            --severity MEDIUM \
-            app/
+            trufflehog3 \
+              --no-history \
+              --severity MEDIUM \
+              app/
 
-          echo "Secret scan passed - no credentials found"
+            echo "Secret scan passed - no credentials found"
 
 
   sast-scan:
@@ -44,7 +45,9 @@ jobs:
           name: Run Semgrep SAST
           command: |
             if ! command -v semgrep >/dev/null 2>&1; then
-              python3 -m pip install semgrep
+              python3 -m pip install --user semgrep
+              echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$BASH_ENV"
+              export PATH="$HOME/.local/bin:$PATH"
             fi
 
             semgrep --config=p/python \
@@ -103,14 +106,14 @@ jobs:
           name: Install Trivy
           command: |
             if ! command -v trivy >/dev/null 2>&1; then
-              mkdir -p $HOME/bin
+              mkdir -p "$HOME/bin"
 
               curl -sfL \
                 https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
-                | sh -s -- -b $HOME/bin
+                | sh -s -- -b "$HOME/bin"
 
-              echo 'export PATH=$HOME/bin:$PATH' >> $BASH_ENV
-              export PATH=$HOME/bin:$PATH
+              echo 'export PATH=$HOME/bin:$PATH' >> "$BASH_ENV"
+              export PATH="$HOME/bin:$PATH"
             fi
 
             trivy --version
@@ -118,6 +121,8 @@ jobs:
       - run:
           name: Scan image for vulnerabilities
           command: |
+            source "$BASH_ENV"
+
             trivy image \
               --exit-code 1 \
               --severity CRITICAL \
@@ -179,3 +184,4 @@ workflows:
       - deploy:
           requires:
             - hold-for-approval
+```
