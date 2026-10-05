@@ -6,7 +6,7 @@ A production-grade DevSecOps pipeline that enforces PCI-DSS security controls au
 
 Implements a payment card tokenization service where sensitive card numbers are encrypted with AES-256-GCM and replaced with secure UUID tokens. The CI/CD pipeline enforces security gates that prevent insecure code from ever reaching production. A host-level Monit layer monitors the running service and automatically recovers it from crashes and memory leaks.
 
-> **Current implementation status:** token storage is in-memory (a Python dict in `app/vault.py`), and the API endpoints do not currently enforce API-key authentication. Both were part of the original design and are tracked in the Roadmap section below rather than described as done.
+> **Current implementation status:** token storage is in-memory (a Python dict in `app/vault.py`), and the API endpoints do not currently enforce API-key authentication. Both were part of the original design and are tracked in the Roadmap section below rather than described as done. 
 
 ## Architecture
 
