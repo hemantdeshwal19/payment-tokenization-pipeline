@@ -1,4 +1,3 @@
-```yaml
 version: 2.1
 
 jobs:
@@ -14,7 +13,6 @@ jobs:
           name: Install TruffleHog
           command: |
             python3 -m pip install --user trufflehog3
-
             echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$BASH_ENV"
             export PATH="$HOME/.local/bin:$PATH"
 
@@ -32,7 +30,6 @@ jobs:
               app/
 
             echo "Secret scan passed - no credentials found"
-
 
   sast-scan:
     machine: true
@@ -56,7 +53,6 @@ jobs:
                     app/
 
             echo "SAST scan passed - no security issues found"
-
 
   test:
     machine: true
@@ -86,7 +82,6 @@ jobs:
           command: |
             . venv/bin/activate
             pytest tests/ -v
-
 
   build-and-scan:
     machine: true
@@ -142,7 +137,6 @@ jobs:
             docker push \
               $DOCKER_USER/tokenizer:$CIRCLE_SHA1
 
-
   deploy:
     machine: true
     resource_class: hemantdeshwal19/hemant-runner
@@ -157,12 +151,10 @@ jobs:
             echo "All PCI controls passed - safe to deploy"
             echo "Deploy complete"
 
-
 workflows:
 
   secure-pipeline:
     jobs:
-
       - secret-scan
 
       - sast-scan
@@ -184,4 +176,3 @@ workflows:
       - deploy:
           requires:
             - hold-for-approval
-```
