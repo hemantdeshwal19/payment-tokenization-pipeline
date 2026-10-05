@@ -2,177 +2,192 @@ version: 2.1
 
 jobs:
 
-  secret-scan:
-    machine: true
-    resource_class: hemantdeshwal19/hemant-runner
+secret-scan:
+machine: true
+resource_class: hemantdeshwal19/hemant-runner
 
-    steps:
-      - checkout
+steps:
+  - checkout
 
-      - run:
-          name: Install TruffleHog
-          command: |
-            python3 -m pip install --user trufflehog3
-            echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$BASH_ENV"
-            export PATH="$HOME/.local/bin:$PATH"
+  - run:
+      name: Verify Python and pip
+      command: |
+        python3 --version
+        python3 -m pip --version
 
-            which trufflehog3
-            trufflehog3 --help
+  - run:
+      name: Install TruffleHog
+      command: |
+        python3 -m pip install --user trufflehog3
 
-      - run:
-          name: Scan for secrets
-          command: |
-            source "$BASH_ENV"
+        "$HOME/.local/bin/trufflehog3" --help
 
-            trufflehog3 \
-              --no-history \
-              --severity MEDIUM \
-              app/
+  - run:
+      name: Scan for secrets
+      command: |
+        "$HOME/.local/bin/trufflehog3" \
+          --no-history \
+          --severity MEDIUM \
+          app/
 
-            echo "Secret scan passed - no credentials found"
+        echo "Secret scan passed - no credentials found"
 
-  sast-scan:
-    machine: true
-    resource_class: hemantdeshwal19/hemant-runner
+sast-scan:
+machine: true
+resource_class: hemantdeshwal19/hemant-runner
 
-    steps:
-      - checkout
+steps:
+  - checkout
 
-      - run:
-          name: Run Semgrep SAST
-          command: |
-            if ! command -v semgrep >/dev/null 2>&1; then
-              python3 -m pip install --user semgrep
-              echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$BASH_ENV"
-              export PATH="$HOME/.local/bin:$PATH"
-            fi
+  - run:
+      name: Install Semgrep
+      command: |
+        if [ ! -x "$HOME/.local/bin/semgrep" ]; then
+          python3 -m pip install --user semgrep
+        fi
 
-            semgrep --config=p/python \
-                    --config=p/secrets \
-                    --error \
-                    app/
+        "$HOME/.local/bin/semgrep" --version
 
-            echo "SAST scan passed - no security issues found"
+  - run:
+      name: Run Semgrep SAST
+      command: |
+        "$HOME/.local/bin/semgrep" \
+          --config=p/python \
+          --config=p/secrets \
+          --error \
+          app/
 
-  test:
-    machine: true
-    resource_class: hemantdeshwal19/hemant-runner
+        echo "SAST scan passed - no security issues found"
 
-    steps:
-      - checkout
+test:
+machine: true
+resource_class: hemantdeshwal19/hemant-runner
 
-      - restore_cache:
-          keys:
-            - deps-{{ checksum "requirements.txt" }}
+steps:
+  - checkout
 
-      - run:
-          name: Install dependencies
-          command: |
-            python3 -m venv venv
-            . venv/bin/activate
-            pip install -r requirements.txt
+  - run:
+      name: Verify Python
+      command: |
+        python3 --version
+        python3 -m pip --version
 
-      - save_cache:
-          key: deps-{{ checksum "requirements.txt" }}
-          paths:
-            - venv
+  - restore_cache:
+      keys:
+        - deps-{{ checksum "requirements.txt" }}
 
-      - run:
-          name: Run tests
-          command: |
-            . venv/bin/activate
-            pytest tests/ -v
+  - run:
+      name: Install dependencies
+      command: |
+        python3 -m venv venv
+        . venv/bin/activate
 
-  build-and-scan:
-    machine: true
-    resource_class: hemantdeshwal19/hemant-runner
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
 
-    steps:
-      - checkout
+  - save_cache:
+      key: deps-{{ checksum "requirements.txt" }}
+      paths:
+        - venv
 
-      - run:
-          name: Build Docker image
-          command: |
-            docker build \
-              -t $DOCKER_USER/tokenizer:$CIRCLE_SHA1 \
-              .
+  - run:
+      name: Run tests
+      command: |
+        . venv/bin/activate
+        pytest tests/ -v
 
-      - run:
-          name: Install Trivy
-          command: |
-            if ! command -v trivy >/dev/null 2>&1; then
-              mkdir -p "$HOME/bin"
+build-and-scan:
+machine: true
+resource_class: hemantdeshwal19/hemant-runner
 
-              curl -sfL \
-                https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
-                | sh -s -- -b "$HOME/bin"
+steps:
+  - checkout
 
-              echo 'export PATH=$HOME/bin:$PATH' >> "$BASH_ENV"
-              export PATH="$HOME/bin:$PATH"
-            fi
+  - run:
+      name: Verify Docker
+      command: |
+        docker --version
+        docker info
 
-            trivy --version
+  - run:
+      name: Build Docker image
+      command: |
+        docker build \
+          -t "$DOCKER_USER/tokenizer:$CIRCLE_SHA1" \
+          .
 
-      - run:
-          name: Scan image for vulnerabilities
-          command: |
-            source "$BASH_ENV"
+  - run:
+      name: Install Trivy
+      command: |
+        if [ ! -x "$HOME/bin/trivy" ]; then
+          mkdir -p "$HOME/bin"
 
-            trivy image \
-              --exit-code 1 \
-              --severity CRITICAL \
-              --no-progress \
-              $DOCKER_USER/tokenizer:$CIRCLE_SHA1
+          curl -sfL \
+            https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
+            | sh -s -- -b "$HOME/bin"
+        fi
 
-            echo "Container scan passed - no CRITICAL CVEs found"
+        "$HOME/bin/trivy" --version
 
-      - run:
-          name: Push image to Docker Hub
-          command: |
-            echo "$DOCKER_PASSWORD" | \
-              docker login \
-              -u "$DOCKER_USER" \
-              --password-stdin
+  - run:
+      name: Scan image for vulnerabilities
+      command: |
+        "$HOME/bin/trivy" image \
+          --exit-code 1 \
+          --severity CRITICAL \
+          --no-progress \
+          "$DOCKER_USER/tokenizer:$CIRCLE_SHA1"
 
-            docker push \
-              $DOCKER_USER/tokenizer:$CIRCLE_SHA1
+        echo "Container scan passed - no CRITICAL CVEs found"
 
-  deploy:
-    machine: true
-    resource_class: hemantdeshwal19/hemant-runner
+  - run:
+      name: Push image to Docker Hub
+      command: |
+        echo "$DOCKER_PASSWORD" | \
+          docker login \
+          --username "$DOCKER_USER" \
+          --password-stdin
 
-    steps:
-      - checkout
+        docker push \
+          "$DOCKER_USER/tokenizer:$CIRCLE_SHA1"
 
-      - run:
-          name: Simulate deployment
-          command: |
-            echo "Deploying image: $DOCKER_USER/tokenizer:$CIRCLE_SHA1"
-            echo "All PCI controls passed - safe to deploy"
-            echo "Deploy complete"
+deploy:
+machine: true
+resource_class: hemantdeshwal19/hemant-runner
+
+steps:
+  - checkout
+
+  - run:
+      name: Simulate deployment
+      command: |
+        echo "Deploying image: $DOCKER_USER/tokenizer:$CIRCLE_SHA1"
+        echo "All PCI controls passed - safe to deploy"
+        echo "Deploy complete"
 
 workflows:
 
-  secure-pipeline:
-    jobs:
-      - secret-scan
+secure-pipeline:
+jobs:
 
-      - sast-scan
+  - secret-scan
 
-      - test:
-          requires:
-            - secret-scan
-            - sast-scan
+  - sast-scan
 
-      - build-and-scan:
-          requires:
-            - test
+  - test:
+      requires:
+        - secret-scan
+        - sast-scan
 
-      - hold-for-approval:
-          type: approval
-          requires:
-            - build-and-scan
+  - build-and-scan:
+      requires:
+        - test
 
-      - deploy:
-          requires:
-            - hold-for-approval
+  - hold-for-approval:
+      type: approval
+      requires:
+        - build-and-scan
+
+  - deploy:
+      requires:
+        - hold-for-approval
