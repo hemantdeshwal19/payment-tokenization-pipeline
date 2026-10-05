@@ -1,50 +1,46 @@
 version: 2.1
 
 jobs:
+
   secret-scan:
     machine: true
     resource_class: hemantdeshwal19/hemant-runner
+
     steps:
       - checkout
 
       - run:
-          name: Install TruffleHog
+          name: Run TruffleHog Secret Scan
           command: |
-            python3 -m pip install --user trufflehog3
-            "$HOME/.local/bin/trufflehog3" --help
-
-      - run:
-          name: Scan for secrets
-          command: |
-            "$HOME/.local/bin/trufflehog3" \
-              --no-history \
-              --severity MEDIUM \
-              app/
+            docker run --rm \
+              -v "$PWD:/repo:ro" \
+              trufflesecurity/trufflehog:latest \
+              filesystem \
+              /repo/app
 
   sast-scan:
     machine: true
     resource_class: hemantdeshwal19/hemant-runner
+
     steps:
       - checkout
 
       - run:
-          name: Install Semgrep
-          command: |
-            python3 -m pip install --user semgrep
-            "$HOME/.local/bin/semgrep" --version
-
-      - run:
           name: Run Semgrep SAST
           command: |
-            "$HOME/.local/bin/semgrep" \
+            docker run --rm \
+              -v "$PWD:/src:ro" \
+              semgrep/semgrep \
+              semgrep \
               --config=p/python \
               --config=p/secrets \
               --error \
-              app/
+              /src/app
 
   test:
     machine: true
     resource_class: hemantdeshwal19/hemant-runner
+
     steps:
       - checkout
 
@@ -74,6 +70,7 @@ jobs:
   build-and-scan:
     machine: true
     resource_class: hemantdeshwal19/hemant-runner
+
     steps:
       - checkout
 
@@ -91,22 +88,18 @@ jobs:
               .
 
       - run:
-          name: Install Trivy
+          name: Pull Trivy Scanner
           command: |
-            mkdir -p "$HOME/bin"
-
-            if [ ! -x "$HOME/bin/trivy" ]; then
-              curl -sfL \
-                https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
-                | sh -s -- -b "$HOME/bin"
-            fi
-
-            "$HOME/bin/trivy" --version
+            docker pull aquasec/trivy:latest
 
       - run:
-          name: Scan image for vulnerabilities
+          name: Scan Docker image
           command: |
-            "$HOME/bin/trivy" image \
+            docker run --rm \
+              -v /var/run/docker.sock:/var/run/docker.sock \
+              -v "$HOME/.cache/trivy:/root/.cache/trivy" \
+              aquasec/trivy:latest \
+              image \
               --exit-code 1 \
               --severity CRITICAL \
               --no-progress \
@@ -126,6 +119,7 @@ jobs:
   deploy:
     machine: true
     resource_class: hemantdeshwal19/hemant-runner
+
     steps:
       - checkout
 
@@ -137,8 +131,10 @@ jobs:
             echo "Deploy complete"
 
 workflows:
+
   secure-pipeline:
     jobs:
+
       - secret-scan
 
       - sast-scan
