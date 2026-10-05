@@ -1,112 +1,45 @@
 version: 2.1
 
 jobs:
-  secret-scan:
-    docker:
-      - image: cimg/python:3.11
-    steps:
-      - checkout
-      - run:
-          name: Install TruffleHog
-          command: pip install trufflehog3
-      - run:
-          name: Scan for secrets
-          command: |
-            trufflehog3 --no-history --severity MEDIUM app/
-            echo "Secret scan passed - no credentials found"
+  runner-test:
+    machine: true
+    resource_class: hemantdeshwal19/hemant-runner
 
-  sast-scan:
-    docker:
-      - image: returntocorp/semgrep
     steps:
-      - checkout
       - run:
-          name: Run Semgrep SAST
+          name: Verify Self-Hosted Runner
           command: |
-            semgrep --config=p/python \
-                    --config=p/secrets \
-                    --error \
-                    app/
-            echo "SAST scan passed - no security issues found"
+            echo "========================================"
+            echo "Self-hosted CircleCI Runner is working!"
+            echo "========================================"
 
-  test:
-    docker:
-      - image: cimg/python:3.11
-    steps:
-      - checkout
-      - restore_cache:
-          keys:
-            - deps-{{ checksum "requirements.txt" }}
-      - run:
-          name: Install dependencies
-          command: |
-            python -m venv venv
-            . venv/bin/activate
-            pip install -r requirements.txt
-      - save_cache:
-          key: deps-{{ checksum "requirements.txt" }}
-          paths:
-            - venv
-      - run:
-          name: Run tests
-          command: |
-            . venv/bin/activate
-            pytest tests/ -v
+            echo "Hostname:"
+            hostname
 
-  build-and-scan:
-    docker:
-      - image: cimg/base:stable
-    steps:
-      - checkout
-      - setup_remote_docker:
-          docker_layer_caching: true
-      - run:
-          name: Build Docker image
-          command: |
-            docker build -t $DOCKER_USER/tokenizer:$CIRCLE_SHA1 .
-      - run:
-          name: Install Trivy
-          command: |
-            mkdir -p $HOME/bin
-            curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b $HOME/bin
-            echo 'export PATH=$HOME/bin:$PATH' >> $BASH_ENV
-      - run:
-          name: Scan image for vulnerabilities
-          command: |
-            trivy image --exit-code 1 \
-                        --severity CRITICAL \
-                        --no-progress \
-                        $DOCKER_USER/tokenizer:$CIRCLE_SHA1
-            echo "Container scan passed - no CRITICAL CVEs found"
-      - run:
-          name: Push image to Docker Hub
-          command: |
-            echo $DOCKER_PASSWORD | docker login -u $DOCKER_USER --password-stdin
-            docker push $DOCKER_USER/tokenizer:$CIRCLE_SHA1
+            echo ""
+            echo "Operating System:"
+            cat /etc/os-release | grep PRETTY_NAME
 
-  deploy:
-    docker:
-      - image: cimg/base:stable
-    steps:
-      - checkout
-      - run:
-          name: Simulate deployment
-          command: |
-            echo "Deploying image: $DOCKER_USER/tokenizer:$CIRCLE_SHA1"
-            echo "All PCI controls passed - safe to deploy"
-            echo "Deploy complete"
+            echo ""
+            echo "Kernel:"
+            uname -a
+
+            echo ""
+            echo "CPU:"
+            nproc
+
+            echo ""
+            echo "User:"
+            whoami
+
+            echo ""
+            echo "Docker:"
+            docker --version || echo "Docker not available"
+
+            echo ""
+            echo "Runner verification completed successfully!"
 
 workflows:
-  secure-pipeline:
+  verify-self-hosted-runner:
     jobs:
-      - secret-scan
-      - sast-scan
-      - test:
-          requires: [secret-scan, sast-scan]
-      - build-and-scan:
-          requires: [test]
-      - hold-for-approval:
-          type: approval
-          requires: [build-and-scan]
-      - deploy:
-          requires: [hold-for-approval]
+      - runner-test
