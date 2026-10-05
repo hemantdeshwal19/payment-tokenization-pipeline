@@ -3,22 +3,34 @@ version: 2.1
 jobs:
 
   secret-scan:
-    machine: true
-    resource_class: hemantdeshwal19/hemant-runner
+  machine: true
+  resource_class: hemantdeshwal19/hemant-runner
 
-    steps:
-      - checkout
+  steps:
+    - checkout
 
-      - run:
-          name: Install TruffleHog
-          command: |
-            pip install trufflehog3
+    - run:
+        name: Install TruffleHog
+        command: |
+          python3 -m pip install --user trufflehog3
 
-      - run:
-          name: Scan for secrets
-          command: |
-            trufflehog3 --no-history --severity MEDIUM app/
-            echo "Secret scan passed - no credentials found"
+          echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$BASH_ENV"
+          export PATH="$HOME/.local/bin:$PATH"
+
+          which trufflehog3
+          trufflehog3 --help
+
+    - run:
+        name: Scan for secrets
+        command: |
+          source "$BASH_ENV"
+
+          trufflehog3 \
+            --no-history \
+            --severity MEDIUM \
+            app/
+
+          echo "Secret scan passed - no credentials found"
 
 
   sast-scan:
